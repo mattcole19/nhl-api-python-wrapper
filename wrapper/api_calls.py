@@ -46,7 +46,7 @@ class Team:
         Obtains the team stats
         :return:
         """
-        if not season:
+        if season:
             r = requests.get(f'{self.team_url}?expand=team.stats&season={season}')
         else:
             r = requests.get(f'{self.team_url}?expand=team.stats')
@@ -69,15 +69,6 @@ class Team:
         r = requests.get(f'{self.team_url}?expand=team.schedule.previous')
         return r.text
 
-    def get_powerplay_goals(self, season):
-        """
-        Obtains the powerplay goals for a given season
-        :param season:
-        :return:
-        """
-        stats = self.get_stats(season=season)
-        print(stats)
-
     def get_powerplay_percentage(self, season):
         """
         Obtains the powerplay percentage for a given season
@@ -86,17 +77,19 @@ class Team:
         pass
 
     def get_stat(self, stat=None, season=None):
+        """
+        Obtains a specific stat for a specific season
+        :param stat: Choose one of the following: ['gamesPlayed', 'wins', 'losses', 'ot', 'pts', 'ptPctg', 'goalsPerGame', 'goalsAgainstPerGame', 'evGGARatio', 'powerPlayPercentage', 'powerPlayGoals', 'powerPlayGoalsAgainst', 'powerPlayOpportunities', 'penaltyKillPercentage', 'shotsPerGame', 'shotsAllowed', 'winScoreFirst', 'winOppScoreFirst', 'winLeadFirstPer', 'winLeadSecondPer', 'winOutshootOpp', 'winOutshotByOpp', 'faceOffsTaken', 'faceOffsWon', 'faceOffsLost', 'faceOffWinPercentage', 'shootingPctg', 'savePctg']
+        :param season:
+        :return:
+        """
         if not stat:
             # TODO: Raise an error
             print(f'No stat passed in')
         else:
             r = self.get_stats(season=season)
-            #print(r)
             desired_stat = r["teams"][0]["teamStats"][0]["splits"][0]["stat"][stat]
             return desired_stat
-
-
-
 
 
 class Player:
@@ -104,6 +97,7 @@ class Player:
     Obtain player specific data
     """
     base_url = 'https://statsapi.web.nhl.com/api/v1/people/'
+    players = {"Crosby": "8471724"}
 
     def __init__(self, player_id):
         self._id = player_id
@@ -112,15 +106,36 @@ class Player:
     def player_url(self):
         return f'{self.base_url}{self._id}'
 
-    def get_stats(self, season=None):
-        if season:
-            return f'{self.player_url}/stats?season={season}'
-        else:
-            return f'{self.player_url}/stats'
+    def get_info(self):
+        """
+        Obtains basic information on the player
+        :return:
+        """
+        r = requests.get(f'{self.player_url}')
+        return r.json()
+
+    def get_stats(self, season):
+        """
+        Obtains statistics for the player for a given season
+        :param season:
+        :return:
+        """
+        r = requests.get(f'{self.player_url}/stats?stats=statsSingleSeason&season={season}')
+
+        print(r.text)
+        return r.json()
+
+    def get_stat(self, stat, season):
+        """
+        Obtains a specific stat for the player for a given season
+        :param stat:
+        :param season:
+        :return:
+        """
+        r = self.get_stats(season=season)
+        return r["stats"][0]["splits"][0]["stat"][stat]
 
 # Tests
 devils = Team(name="New Jersey Devils")
 #(devils.get_roster(season="19921993"))
 #print(devils.get_stats())
-
-#
