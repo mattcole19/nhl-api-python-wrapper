@@ -4,7 +4,7 @@ Unit tests
 import unittest
 import requests
 import random
-from .api_calls import Team, Player
+from api_calls import Team, Player
 
 
 class TeamTests(unittest.TestCase):
@@ -91,9 +91,18 @@ class PlayerTests(unittest.TestCase):
         Tests the get_stats function
         :return:
         """
+        # All stats
+        r = requests.get(f'{self.player_url}/{self.letang_id}/stats?stats=yearByYear')
+        self.assertEqual(self.letang.get_stats(), r.json())
+
         # 20172018 stats
         r = requests.get(f'{self.player_url}/{self.letang_id}/stats?stats=statsSingleSeason&season=20172018')
         self.assertEqual(self.letang.get_stats(season="20172018"), r.json())
+
+        # 20152016 vsTeam split
+        r = requests.get(f'{self.player_url}/{self.letang_id}/stats?stats=vsTeam&season=20152016')
+        self.assertEqual(self.letang.get_stats(season="20152016", split="vsTeam"), r.json())
+        print(r.text)
 
     def test_get_stat(self):
         """

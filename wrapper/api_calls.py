@@ -2,6 +2,8 @@
 Using this file to get used to the nhl api with Python
 Unofficial documentation: https://gitlab.com/dword4/nhlapi
 Base URL: https://statsapi.web.nhl.com/api/v1/
+Some NHL data analyses examples: https://hockey-graphs.com/category/data-analysis/
+Kaggle Data: https://www.kaggle.com/martinellis/nhl-game-data?select=team_info.csv
 """
 import requests
 import json
@@ -91,13 +93,12 @@ class Team:
             desired_stat = r["teams"][0]["teamStats"][0]["splits"][0]["stat"][stat]
             return desired_stat
 
-
 class Player:
     """
     Obtain player specific data
     """
     base_url = 'https://statsapi.web.nhl.com/api/v1/people/'
-    players = {"Crosby": "8471724"}
+    players = {"Letang": "8471724"}
 
     def __init__(self, player_id):
         self._id = player_id
@@ -114,15 +115,19 @@ class Player:
         r = requests.get(f'{self.player_url}')
         return r.json()
 
-    def get_stats(self, season):
+    def get_stats(self, season=None, split="statsSingleSeason"):
         """
-        Obtains statistics for the player for a given season
+        Obtains statistics for the player on a given split. If a season is not specified, it gives the statistics for all seasons
         :param season:
+        :param split: Choose one of the following: [statsSingleSeason, homeAndAway, winLoss, byMonth, byDayOfWeek, vsDivision, vsConference, vsTeam, gameLog, regularSeasonStatRankings, goalsByGameSituation]
         :return:
         """
-        r = requests.get(f'{self.player_url}/stats?stats=statsSingleSeason&season={season}')
+        if season:
+            modifier = f'?stats={split}'
+            r = requests.get(f'{self.player_url}/stats{modifier}&season={season}')
+        else:
+            r = requests.get(f'{self.player_url}/stats?stats=yearByYear')
 
-        print(r.text)
         return r.json()
 
     def get_stat(self, stat, season):
@@ -135,7 +140,67 @@ class Player:
         r = self.get_stats(season=season)
         return r["stats"][0]["splits"][0]["stat"][stat]
 
+class Game:
+    """ 
+    Obtain statistics for a particular game
+    """
+
+    base_url = 'https://statsapi.web.nhl.com/api/v1/game/'
+
+    def __init__(self, game_id):
+        self._game_id = game_id
+
+    @property
+    def game_url(self):
+        return f'{self.base_url}{self._game_id}'
+
+    def get_boxscore(self):
+        """
+        Obtains the boxscore for a given game
+        """
+        r = requests.get(f'{self.game_url}/boxscore')
+        return r.json()
+
+    def get_teams(self):
+        """
+        Obtains the home and away team for the game
+        """
+        data = self.get_boxscore()
+        return data["teams"]
+
+    def get_players(self, home=True):
+        """
+        Obtains the players that played in the game
+        :param home: boolean
+        """
+        if home:
+            return self.get_teams()["home"]["players"]
+        else:
+            return self.get_teams()["away"]["players"]
+
+    def get_coaches(self, home=True):
+        """
+        Obtains the coaches for the game
+        """
+        if home:
+            return self.get_teams()["home"]["coaches"]
+        else:
+            return self.get_teams()["away"]["coaches"]
+
+
+
+
+
 # Tests
 devils = Team(name="New Jersey Devils")
 #(devils.get_roster(season="19921993"))
 #print(devils.get_stats())
+
+
+game = Game("2011030221")
+boxscore = game.get_boxscore()
+home_goalie = boxscore["teams"]["home"]["goalies"][0]
+print(home_goalie)
+print()
+
+
