@@ -18,18 +18,25 @@ class Team:
     """
 
     base_url = "https://statsapi.web.nhl.com/api/v1/teams/"
-    teams = {"New Jersey Devils": "1", " ": ""}
 
-    def __init__(self, name):
-        self.name = name
-        self._id = self.teams[name]
+    def __init__(self, team_id):
+        self._id = team_id
 
     @property
     def team_url(self):
         return f"{self.base_url}{self._id}"
 
-    def get_team(self):
-        pass
+    @property
+    def team_id(self):
+        return self._id
+
+    def get_info(self):
+        r = requests.get(f'{self.team_url}')
+        return r.json()
+
+    def get_name(self):
+        data = self.get_info()["teams"][0]["name"]
+        return data
 
     def get_roster(self, season=None):
         """
@@ -41,7 +48,7 @@ class Team:
         else:
             r = requests.get(f'{self.team_url}?expand=team.roster')
 
-        return r.text
+        return r.json()
 
     def get_stats(self, season=None):
         """
@@ -55,13 +62,46 @@ class Team:
 
         return r.json()
 
+    def get_game_ids(self, season):
+        """
+        Obtains all game_ids for a team for a given season
+        :param season:
+        :param teamId:
+        :return:
+        """
+        r = requests.get(f"https://statsapi.web.nhl.com/api/v1/schedule?teamId={self._id}&season={season}")
+        if r.status_code != 200:
+            # TODO: Raise some sort of error
+            return []
+        game_ids = [game["gamePk"] for date in r.json()["dates"] for game in date["games"]]
+        return game_ids
+
+    def get_games_against(self, opposing_teamID, season):
+        """
+        Obtains all game ids for games against another specified team for a given season
+        :param opposing_teamID:
+        :param season:
+        :return:
+        """
+        game_ids = []
+        for game_id in self.get_game_ids(season=season):
+            game = Game(game_id=game_id)
+            teams = game.get_teams()
+            away_team = teams["away"]["team"]["id"]
+            home_team = teams["home"]["team"]["id"]
+
+            if (away_team == opposing_teamID) or (home_team == opposing_teamID):
+                game_ids.append(game_id)
+
+        return game_ids
+
     def get_next_game(self):
         """
         Obtains the details of the next game to be played
         :return:
         """
         r = requests.get(f'{self.team_url}?expand=team.schedule.next')
-        return r.text
+        return r.json()
 
     def get_prev_game(self):
         """
@@ -69,7 +109,7 @@ class Team:
         :return:
         """
         r = requests.get(f'{self.team_url}?expand=team.schedule.previous')
-        return r.text
+        return r.json()
 
     def get_powerplay_percentage(self, season):
         """
@@ -92,6 +132,7 @@ class Team:
             r = self.get_stats(season=season)
             desired_stat = r["teams"][0]["teamStats"][0]["splits"][0]["stat"][stat]
             return desired_stat
+
 
 class Player:
     """
@@ -139,6 +180,7 @@ class Player:
         """
         r = self.get_stats(season=season)
         return r["stats"][0]["splits"][0]["stat"][stat]
+
 
 class Game:
     """ 
@@ -188,19 +230,9 @@ class Game:
             return self.get_teams()["away"]["coaches"]
 
 
-
-
-
-# Tests
-devils = Team(name="New Jersey Devils")
-#(devils.get_roster(season="19921993"))
-#print(devils.get_stats())
-
-
-game = Game("2011030221")
-boxscore = game.get_boxscore()
-home_goalie = boxscore["teams"]["home"]["goalies"][0]
-print(home_goalie)
-print()
+NJD = Team(team_id=1)
+NYI = Team(team_id=2)
+games = NJD.get_games_against(opposing_teamID=NYI.team_id, season="20172018")
+print(games)
 
 

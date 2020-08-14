@@ -4,7 +4,7 @@ Unit tests
 import unittest
 import requests
 import random
-from api_calls import Team, Player
+from .api_calls import Team, Player
 
 
 class TeamTests(unittest.TestCase):
@@ -21,7 +21,7 @@ class TeamTests(unittest.TestCase):
         self.team_name = "New Jersey Devils"
         self.team_id = "1"
         self.team_url = f'{self.base_url}{self.team_id}'
-        self.NJD = Team(name=self.team_name)
+        self.NJD = Team(team_id=self.team_id)
         self.seasons = ['20102011', '20112012', '20122013, 20152016, 20172018']
 
     def test_get_team(self):
@@ -37,7 +37,7 @@ class TeamTests(unittest.TestCase):
         :return:
         """
         r = requests.get(f'{self.team_url}?expand=team.roster')
-        self.assertEqual(self.NJD.get_roster(), r.text)
+        self.assertEqual(self.NJD.get_roster(), r.json())
 
     def test_get_stats(self):
         """
@@ -53,6 +53,17 @@ class TeamTests(unittest.TestCase):
         season = random.choice(self.seasons)
         r = requests.get(f'{self.team_url}?expand=team.stats&season={season}')
         self.assertEqual(self.NJD.get_stats(season=season), r.json())
+
+    def test_get_game_ids(self):
+        """
+        Tests the get_game_ids function
+        :return:
+        """
+
+        # All 20172018 NJD games
+        r = requests.get(f"https://statsapi.web.nhl.com/api/v1/schedule?teamId={self.team_id}&season=20172018")
+        game_ids = [game["gamePk"] for date in r.json()["dates"] for game in date["games"]]
+        self.assertEquals(self.NJD.get_game_ids(season="20172018"), game_ids)
 
     def test_get_stat(self):
         """
@@ -102,7 +113,6 @@ class PlayerTests(unittest.TestCase):
         # 20152016 vsTeam split
         r = requests.get(f'{self.player_url}/{self.letang_id}/stats?stats=vsTeam&season=20152016')
         self.assertEqual(self.letang.get_stats(season="20152016", split="vsTeam"), r.json())
-        print(r.text)
 
     def test_get_stat(self):
         """
